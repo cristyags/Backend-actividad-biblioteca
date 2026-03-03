@@ -15,6 +15,7 @@ class LoanController extends Controller
      */
     public function index()
     {
+        $this->authorize('viewAny', Loan::class);
         $loans = Loan::with('book')->paginate();
 
         return response()->json(LoanResource::collection($loans));
@@ -25,6 +26,7 @@ class LoanController extends Controller
      */
     public function store(StoreLoanRequest $request)
     {
+        $this->authorize('create', Loan::class);
         $book = Book::find($request->input('book_id'));
 
         if (! $book->is_available || $book->available_copies === 0) {
