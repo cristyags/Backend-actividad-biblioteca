@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -12,18 +14,15 @@ class AuthTest extends TestCase
 
     public function test_it_can_login()
     {
-        // Preparacion
         $user = User::factory()->create([
             'password' => bcrypt('test123'),
         ]);
 
-        // Ejecucion
-        $response = $this->post('/api/v1/login', [
+        $response = $this->postJson('/api/v1/login', [
             'email' => $user->email,
             'password' => 'test123',
         ]);
 
-        // Verificacion
         $response->assertStatus(200);
         $response->assertJsonStructure([
             'access_token',
@@ -32,5 +31,46 @@ class AuthTest extends TestCase
         ]);
 
         $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_login_credenciales_invalidas_devuelve_422(): void
+    {
+        $user = User::factory()->create([
+            'password' => bcrypt('test123'),
+        ]);
+
+        $res = $this->postJson('/api/v1/login', [
+            'email' => $user->email,
+            'password' => 'mal_password',
+        ]);
+
+        $res->assertStatus(422)
+            ->assertJson(['message' => 'Invalid credentials']);
+    }
+
+    // ========================
+    // PRUEBAS DE PROFILE
+    // ========================
+
+    public function test_profile_sin_token_devuelve_401(): void
+    {
+        $response = $this->getJson('/api/v1/profile');
+
+        $response->assertStatus(401);
+    }
+
+    public function test_profile_con_token_devuelve_200_y_datos_usuario(): void
+    {
+        $user = User::factory()->create();
+
+        Sanctum::actingAs($user);
+
+        $response = $this->getJson('/api/v1/profile');
+
+        $response->assertStatus(200)
+                 ->assertJsonFragment([
+                     'id' => $user->id,
+                     'email' => $user->email,
+                 ]);
     }
 }
