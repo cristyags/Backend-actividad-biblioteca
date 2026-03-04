@@ -27,27 +27,55 @@ test('listar libros sin token devuelve 401', function () {
 |--------------------------------------------------------------------------
 */
 
-test('listar libros con token devuelve 200', function () {
+test('listar libros', function () {
 
-    // Crear usuario
+    // Crear rol (BD limpia por RefreshDatabase)
+    Role::firstOrCreate(['name' => 'estudiante', 'guard_name' => 'web']);
+
+    // Usuario con rol
     $user = User::factory()->create();
+    $user->assignRole('estudiante');
 
-    // Autenticar con Sanctum
+    // Auth
     Sanctum::actingAs($user);
 
-    // Crear un libro en BD
-    Book::create([
+    // Libro
+    $book = Book::create([
         'title' => 'Clean Code',
-        'description' => 'Libro de programacion',
+        'description' => 'Libro sobre buenas prácticas de programación',
         'ISBN' => '9780132350884',
-        'total_copies' => 3,
-        'available_copies' => 3,
+        'total_copies' => 5,
+        'available_copies' => 5,
         'is_available' => true,
     ]);
 
     $response = $this->getJson('/api/v1/books');
 
+    // 1) Status
     $response->assertStatus(200);
+
+    // 2) Estructura (array directo)
+    $response->assertJsonStructure([
+        '*' => [
+            'id',
+            'title',
+            'description',
+            'ISBN',
+            'total_copies',
+            'available_copies',
+            'is_available',
+        ]
+    ]);
+
+    // 3) Validar que viene el libro y campos clave correctos
+    $response->assertJsonFragment([
+        'id' => $book->id,
+        'title' => 'Clean Code',
+        'ISBN' => '9780132350884',
+        'total_copies' => 5,
+        'available_copies' => 5,
+        'is_available' => 'Disponible', // porque tu API lo devuelve como texto
+    ]);
 });
 
 // PRESTAMOS
@@ -57,7 +85,7 @@ test('listar loans sin token devuelve 401', function () {
     $response->assertStatus(401);
 });
 
-test('listar loans con token devuelve 200', function () {
+test('listar loans', function () {
 
     // Crear rol necesario
     Role::create(['name' => 'bibliotecario']);
