@@ -73,4 +73,25 @@ class AuthTest extends TestCase
                      'email' => $user->email,
                  ]);
     }
+
+    public function test_logout_sin_token_devuelve_401(): void
+    {
+    $response = $this->postJson('/api/v1/logout');
+
+    $response->assertStatus(401);
+    }
+
+    public function test_logout_con_token_devuelve_200(): void
+    {
+        $user = User::factory()->create();
+
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/v1/logout');
+
+        $response->assertStatus(200)
+                ->assertJson([
+                    'message' => 'Logged out successfully',
+                ]);
+    }
 }
